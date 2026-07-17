@@ -7,12 +7,11 @@ interactive NPCs, branching dialogue drawn from the poem, sailing, stealth, and 
 ## Run
 
 ```bash
-npm install          # fetches three.js (the only dependency)
 python3 -m http.server 4173
 # open http://127.0.0.1:4173
 ```
 
-(Any static file server works; Three.js is resolved from `node_modules` via the import map.)
+(Any static file server works — Three.js is vendored in `vendor/`, no install or build step needed. Works on GitHub Pages too.)
 
 ## Controls
 
