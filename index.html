@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Odyssey — Homecoming of Odysseus</title>
+<style>
+  :root {
+    --gold: #d9b45b;
+    --gold-dim: #a3873f;
+    --ink: #efe6d0;
+    --panel: rgba(12, 18, 28, 0.88);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #060a12; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: var(--ink); }
+  canvas { display: block; }
+  .hidden { display: none !important; }
+
+  /* ---------- title screen ---------- */
+  #title {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 35%, #1a2b47 0%, #0a1220 55%, #05080f 100%);
+    text-align: center;
+  }
+  #title h1 {
+    font-size: clamp(42px, 7vw, 84px); letter-spacing: 0.18em; color: var(--gold);
+    text-shadow: 0 0 40px rgba(217,180,91,.35); font-weight: normal;
+  }
+  #title h2 { font-size: clamp(14px, 2vw, 22px); letter-spacing: .5em; margin-top: 10px; opacity: .8; font-weight: normal; }
+  #title .quote { margin-top: 34px; max-width: 620px; font-style: italic; opacity: .65; line-height: 1.7; padding: 0 20px; }
+  .meander {
+    width: 300px; height: 14px; margin: 26px 0;
+    background:
+      repeating-linear-gradient(90deg, var(--gold-dim) 0 2px, transparent 2px 10px) top/100% 2px no-repeat,
+      repeating-linear-gradient(90deg, var(--gold-dim) 0 2px, transparent 2px 10px) bottom/100% 2px no-repeat;
+    opacity: .9;
+  }
+  #title .buttons { margin-top: 40px; display: flex; gap: 18px; }
+  .btn {
+    font-family: inherit; font-size: 18px; letter-spacing: .2em; cursor: pointer;
+    color: var(--ink); background: transparent; border: 1px solid var(--gold-dim);
+    padding: 14px 44px; transition: all .25s;
+  }
+  .btn:hover { background: rgba(217,180,91,.15); border-color: var(--gold); color: var(--gold); }
+  #title .controls-hint { margin-top: 46px; font-size: 13px; opacity: .5; letter-spacing: .1em; line-height: 2; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  #objective {
+    position: absolute; top: 22px; left: 24px; max-width: 380px;
+    background: var(--panel); border-left: 3px solid var(--gold);
+    padding: 12px 18px; font-size: 15px; line-height: 1.5;
+  }
+  #objective .chap { color: var(--gold); font-size: 11px; letter-spacing: .25em; margin-bottom: 4px; }
+  #hpwrap { position: absolute; bottom: 26px; left: 26px; width: 240px; }
+  #hpwrap .lbl { font-size: 11px; letter-spacing: .3em; opacity: .8; margin-bottom: 5px; }
+  .bar { height: 10px; background: rgba(0,0,0,.55); border: 1px solid rgba(217,180,91,.5); }
+  .bar > div { height: 100%; background: linear-gradient(90deg, #8c2f2f, #c04545); transition: width .2s; }
+  #shipwrap { position: absolute; bottom: 70px; left: 26px; width: 240px; }
+  #shipwrap .bar > div { background: linear-gradient(90deg, #3f6a8c, #5a93c0); }
+  #prompt {
+    position: absolute; bottom: 17%; left: 50%; transform: translateX(-50%);
+    background: var(--panel); border: 1px solid var(--gold-dim);
+    padding: 9px 22px; font-size: 16px;
+  }
+  #prompt b { color: var(--gold); }
+  #hint { position: absolute; bottom: 20px; right: 24px; font-size: 12px; opacity: .55; text-align: right; line-height: 1.9; }
+  #crosshair {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 22px; height: 22px; pointer-events: none;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: var(--gold);
+  }
+  #crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); }
+  #toasts { position: absolute; top: 22px; right: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .toast {
+    background: var(--panel); border-right: 3px solid var(--gold);
+    padding: 10px 16px; font-size: 14px; animation: toastin .3s ease;
+  }
+  @keyframes toastin { from { opacity: 0; transform: translateX(20px); } }
+
+  /* ---------- floating labels (nametags / speech) ---------- */
+  #bubbles { position: fixed; inset: 0; z-index: 9; pointer-events: none; overflow: hidden; }
+  .nametag {
+    position: absolute; transform: translate(-50%,-100%);
+    font-size: 12px; letter-spacing: .15em; color: var(--gold);
+    text-shadow: 0 1px 3px #000; white-space: nowrap;
+  }
+  .bark {
+    position: absolute; transform: translate(-50%,-100%);
+    background: var(--panel); border: 1px solid rgba(217,180,91,.4);
+    padding: 6px 12px; font-size: 13px; font-style: italic; max-width: 260px;
+    white-space: normal; text-align: center; border-radius: 2px;
+  }
+
+  /* ---------- dialogue ---------- */
+  #dialogue {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    display: flex; justify-content: center; pointer-events: none;
+  }
+  #dialogue .box {
+    pointer-events: auto; width: min(860px, 94vw); margin-bottom: 34px;
+    background: var(--panel); border: 1px solid rgba(217,180,91,.45);
+    border-top: 2px solid var(--gold); padding: 20px 30px 18px;
+  }
+  #dlg-speaker { color: var(--gold); letter-spacing: .3em; font-size: 13px; margin-bottom: 8px; text-transform: uppercase; }
+  #dlg-text { font-size: 18px; line-height: 1.65; min-height: 54px; }
+  #dlg-opts { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .dlg-opt {
+    font-family: inherit; text-align: left; cursor: pointer; font-size: 16px;
+    background: transparent; border: none; color: var(--ink); padding: 7px 10px;
+    border-left: 2px solid transparent; transition: all .15s;
+  }
+  .dlg-opt:hover, .dlg-opt.sel { border-left-color: var(--gold); background: rgba(217,180,91,.1); color: var(--gold); }
+  .dlg-opt .num { color: var(--gold-dim); margin-right: 10px; }
+
+  /* ---------- narration / banner / fade ---------- */
+  #narrate {
+    position: fixed; inset: 0; z-index: 30; background: rgba(3,5,10,.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 40px; cursor: pointer;
+  }
+  #narrate .n-text { max-width: 700px; font-size: 21px; line-height: 1.9; font-style: italic; opacity: .95; }
+  #narrate .n-more { margin-top: 40px; font-size: 13px; letter-spacing: .3em; color: var(--gold-dim); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  #banner {
+    position: fixed; top: 24%; left: 0; right: 0; z-index: 25; text-align: center;
+    pointer-events: none; opacity: 0; transition: opacity 1.2s;
+  }
+  #banner .b-chap { font-size: 15px; letter-spacing: .6em; color: var(--gold); }
+  #banner .b-title { font-size: 44px; letter-spacing: .2em; margin-top: 12px; text-shadow: 0 2px 20px #000; }
+  #fade { position: fixed; inset: 0; z-index: 35; background: #000; opacity: 0; pointer-events: none; transition: opacity .8s; }
+  #vignette-red { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; transition: opacity .3s;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(160,20,20,.55) 100%); }
+</style>
+</head>
+<body>
+<div id="hud" class="hidden">
+  <div id="objective"><div class="chap" id="obj-chap"></div><div id="obj-text"></div></div>
+  <div id="hpwrap"><div class="lbl">ODYSSEUS</div><div class="bar"><div id="hpbar" style="width:100%"></div></div></div>
+  <div id="shipwrap" class="hidden"><div class="lbl">SHIP</div><div class="bar"><div id="shipbar" style="width:100%"></div></div></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="crosshair" class="hidden"></div>
+  <div id="hint">WASD move &nbsp;·&nbsp; mouse look &nbsp;·&nbsp; SHIFT run<br>E interact &nbsp;·&nbsp; click attack &nbsp;·&nbsp; 1–4 choose reply</div>
+  <div id="toasts"></div>
+</div>
+<div id="bubbles"></div>
+<div id="vignette-red"></div>
+<div id="dialogue" class="hidden">
+  <div class="box">
+    <div id="dlg-speaker"></div>
+    <div id="dlg-text"></div>
+    <div id="dlg-opts"></div>
+  </div>
+</div>
+<div id="narrate" class="hidden"><div class="n-text"></div><div class="n-more">CLICK TO CONTINUE</div></div>
+<div id="banner"><div class="b-chap"></div><div class="b-title"></div></div>
+<div id="fade"></div>
+
+<div id="title">
+  <h2>THE ODYSSEY</h2>
+  <div class="meander"></div>
+  <h1>HOMECOMING</h1>
+  <div class="quote">“Sing to me of the man, Muse, the man of twists and turns,<br>
+    driven time and again off course, once he had plundered<br>the hallowed heights of Troy.”</div>
+  <div class="buttons">
+    <button class="btn" id="btn-new">NEW VOYAGE</button>
+    <button class="btn hidden" id="btn-continue">CONTINUE</button>
+  </div>
+  <div class="controls-hint">WASD — MOVE · MOUSE — LOOK · E — INTERACT · CLICK — ATTACK<br>PLAY AS ODYSSEUS · FOUR CHAPTERS OF THE EPIC</div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
